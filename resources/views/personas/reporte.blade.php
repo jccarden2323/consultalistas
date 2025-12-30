@@ -31,9 +31,9 @@
 
             <h4>Reporte</h4>
 
-            @php
+                        @php
             /* ============================================================
-            FUNCIÓN ÚNICA DE RENDER (ROBUSTA Y SEGURA)
+            FUNCIÓN ÚNICA DE RENDER 
             ============================================================ */
             function renderSource($label, $data) {
 
@@ -104,139 +104,213 @@
             }
             @endphp
 
-            {{-- ============================================================
-            RESUMEN EJECUTIVO
-            ============================================================ --}}
-            <div class="card mb-4">
-                <div class="card-header bg-light"><strong>Resumen de Riesgo</strong></div>
-                <div class="card-body text-center">
-                    @php
-                        $altos  = count($json['hallazgos']['altos'] ?? []);
-                        $medios = count($json['hallazgos']['medios'] ?? []);
-                        $bajos  = count($json['hallazgos']['bajos'] ?? []);
+            <div class="accordion" id="reporteAccordion">
 
-                        if ($altos > 0) { $nivel = 'ALTO'; $color = 'bg-danger'; }
-                        elseif ($medios > 0) { $nivel = 'MEDIO'; $color = 'bg-warning'; }
-                        elseif ($bajos > 0) { $nivel = 'BAJO'; $color = 'bg-success'; }
-                        else { $nivel = 'SIN RIESGO'; $color = 'bg-secondary'; }
-                    @endphp
+                {{-- ============================================================
+                RESUMEN EJECUTIVO
+                ============================================================ --}}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingResumen">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseResumen" aria-expanded="true" aria-controls="collapseResumen">
+                            Resumen de Riesgo
+                        </button>
+                    </h2>
+                    <div id="collapseResumen" class="accordion-collapse collapse show" aria-labelledby="headingResumen" data-bs-parent="#reporteAccordion">
+                        <div class="accordion-body text-center">
+                            @php
+                                $altos  = count($json['hallazgos']['altos'] ?? []);
+                                $medios = count($json['hallazgos']['medios'] ?? []);
+                                $bajos  = count($json['hallazgos']['bajos'] ?? []);
 
-                    <span class="badge {{ $color }} fs-5 p-3">Riesgo {{ $nivel }}</span>
+                                if ($altos > 0) { $nivel = 'ALTO'; $color = 'bg-danger'; }
+                                elseif ($medios > 0) { $nivel = 'MEDIO'; $color = 'bg-warning'; }
+                                elseif ($bajos > 0) { $nivel = 'BAJO'; $color = 'bg-success'; }
+                                else { $nivel = 'SIN RIESGO'; $color = 'bg-secondary'; }
+                            @endphp
 
-                    <div class="mt-3 text-muted">
-                        Altos: {{ $altos }} | Medios: {{ $medios }} | Bajos: {{ $bajos }}
-                    </div>
-                </div>
-            </div>
-
-            {{-- ============================================================
-            DATOS GENERALES
-            ============================================================ --}}
-            <div class="card mb-3">
-                <div class="card-header">Datos Generales</div>
-                <div class="card-body">
-
-                    @if(!is_array($json) || empty($json))
-                        <div class="alert alert-warning">
-                            Este reporte aún no ha sido procesado o no contiene datos.
+                            <span class="badge {{ $color }} fs-5 p-3">Riesgo {{ $nivel }}</span>
+                            <div class="mt-3 text-muted">
+                                Altos: {{ $altos }} | Medios: {{ $medios }} | Bajos: {{ $bajos }}
+                            </div>
                         </div>
-                    @else
-
-                        {{-- PERSONA --}}
-                        @if(isset($json['tipo_sujeto']) && $json['tipo_sujeto'] === 'persona')
-                            {!! renderSource('Datos personales', $json['datos_persona'] ?? []) !!}
-                        @endif
-
-                        {{-- EMPRESA --}}
-                        @if(isset($json['tipo_sujeto']) && $json['tipo_sujeto'] === 'empresa')
-                            {!! renderSource('Datos Generales de la Empresa', $json['datos_empresa'] ?? []) !!}
-                            
-                            {{-- ACTIVIDAD ECONÓMICA --}}
-                            {!! renderSource('Actividad Económica', $json['actividad_economica'] ?? []) !!}
-
-                            {{-- REGISTRO MERCANTIL --}}
-                            {!! renderSource('Registro Mercantil', $json['registro_mercantil'] ?? []) !!}
-
-                            {{-- REPRESENTACIÓN LEGAL Y VÍNCULOS --}}
-                            {!! renderSource('Representación Legal y Vínculos', $json['representacion_legal'] ?? []) !!}
-                            
-                            {{-- OTROS DATOS DE LA EMPRESA --}}
-                            {!! renderSource('Otros Datos de la Empresa', $json['otros_datos_empresa'] ?? []) !!}
-                        @endif
-                    @endif
+                    </div>
                 </div>
+
+                {{-- ============================================================
+                DATOS GENERALES
+                ============================================================ --}}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingDatos">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDatos" aria-expanded="true" aria-controls="collapseDatos">
+                            Datos Generales
+                        </button>
+                    </h2>
+                    <div id="collapseDatos" class="accordion-collapse collapse show" aria-labelledby="headingDatos" data-bs-parent="#reporteAccordion">
+                        <div class="accordion-body">
+                            @if(!is_array($json) || empty($json))
+                                <div class="alert alert-warning">
+                                    Este reporte aún no ha sido procesado o no contiene datos.
+                                </div>
+                            @else
+                                @if(isset($json['tipo_sujeto']) && $json['tipo_sujeto'] === 'persona')
+                                    {!! renderSource('Datos personales', $json['datos_persona'] ?? []) !!}
+                                @endif
+                                
+                                @if(isset($json['tipo_sujeto']) && $json['tipo_sujeto'] === 'empresa')
+                                    {!! renderSource('Datos Generales de la Empresa', $json['datos_empresa'] ?? []) !!}
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ============================================================
+                EMPRESA: SECCIONES INDEPENDIENTES
+                ============================================================ --}}
+                @if(isset($json['tipo_sujeto']) && $json['tipo_sujeto'] === 'empresa')
+                    @foreach([
+                        'Actividad Económica' => 'actividad_economica',
+                        'Registro Mercantil' => 'registro_mercantil',
+                        'Representación Legal y Vínculos' => 'representacion_legal',
+                        'Otros Datos de la Empresa' => 'otros_datos_empresa'
+                    ] as $label => $key)
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ $key }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $key }}" aria-expanded="false" aria-controls="collapse{{ $key }}">
+                                    {{ $label }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ $key }}" class="accordion-collapse collapse" aria-labelledby="heading{{ $key }}" data-bs-parent="#reporteAccordion">
+                                <div class="accordion-body">
+                                    {!! renderSource($label, $json[$key] ?? []) !!}
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+
+                {{-- ============================================================
+                BLOQUES SOLO PERSONA (colapsados por defecto)
+                ============================================================ --}}
+                @php $accordionIndex = 1; @endphp
+
+                @if(is_array($json) && ($json['tipo_sujeto'] ?? null) === 'persona')
+
+                    {{-- HALLAZGOS --}}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingHallazgos">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHallazgos" aria-expanded="false" aria-controls="collapseHallazgos">
+                                Hallazgos
+                            </button>
+                        </h2>
+                        <div id="collapseHallazgos" class="accordion-collapse collapse" aria-labelledby="headingHallazgos" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                @foreach(['altos'=>'alert-danger','medios'=>'alert-warning','bajos'=>'alert-info','infos'=>'alert-secondary'] as $nivel=>$color)
+                                    @php $items = $json['hallazgos'][$nivel] ?? [] @endphp
+                                    @if(count($items))
+                                        <div class="alert {{ $color }}">
+                                            <strong>{{ strtoupper($nivel) }}</strong>
+                                            <ul class="mb-0">
+                                                @foreach($items as $h)
+                                                    <li>
+                                                        {{ $h['descripcion'] ?? 'Sin descripción' }}
+                                                        @if(!empty($h['codigo']))
+                                                            <small class="text-muted">({{ $h['codigo'] }})</small>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- LISTAS RESTRICTIVAS --}}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingListas">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseListas" aria-expanded="false" aria-controls="collapseListas">
+                                Listas Restrictivas
+                            </button>
+                        </h2>
+                        <div id="collapseListas" class="accordion-collapse collapse" aria-labelledby="headingListas" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                @foreach($json['listas_restrictivas'] ?? [] as $k => $v)
+                                    {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- ANTECEDENTES --}}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingAntecedentes">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAntecedentes" aria-expanded="false" aria-controls="collapseAntecedentes">
+                                Antecedentes Legales
+                            </button>
+                        </h2>
+                        <div id="collapseAntecedentes" class="accordion-collapse collapse" aria-labelledby="headingAntecedentes" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                @foreach($json['antecedentes_legales'] ?? [] as $k => $v)
+                                    {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- ANTECEDENTES COMPLETOS --}}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingAntecedentesCompletos">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAntecedentesCompletos" aria-expanded="false" aria-controls="collapseAntecedentesCompletos">
+                                Antecedentes Legales Completos
+                            </button>
+                        </h2>
+                        <div id="collapseAntecedentesCompletos" class="accordion-collapse collapse" aria-labelledby="headingAntecedentesCompletos" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                @foreach($json['antecedentes_legales_completos'] ?? [] as $k => $v)
+                                    {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- RUNT --}}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingRunt">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRunt" aria-expanded="false" aria-controls="collapseRunt">
+                                Tránsito y RUNT
+                            </button>
+                        </h2>
+                        <div id="collapseRunt" class="accordion-collapse collapse" aria-labelledby="headingRunt" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                @foreach($json['transito_y_runt'] ?? [] as $k => $v)
+                                    {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- PROFESIONALES --}}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingProfesionales">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProfesionales" aria-expanded="false" aria-controls="collapseProfesionales">
+                                Profesionales y Económicos
+                            </button>
+                        </h2>
+                        <div id="collapseProfesionales" class="accordion-collapse collapse" aria-labelledby="headingProfesionales" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                @foreach($json['profesionales_y_economicos'] ?? [] as $k => $v)
+                                    {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                @endif
             </div>
 
-            {{-- ============================================================
-            BLOQUES SOLO PERSONA
-            ============================================================ --}}
-            @if(is_array($json) && ($json['tipo_sujeto'] ?? null) === 'persona')
-
-                {{-- HALLAZGOS --}}
-                <div class="card mb-4">
-                    <div class="card-header bg-warning">Hallazgos</div>
-                    <div class="card-body">
-                        @foreach(['altos'=>'alert-danger','medios'=>'alert-warning','bajos'=>'alert-info','infos'=>'alert-secondary'] as $nivel=>$color)
-                            @php $items = $json['hallazgos'][$nivel] ?? [] @endphp
-                            @if(count($items))
-                                <div class="alert {{ $color }}">
-                                    <strong>{{ strtoupper($nivel) }}</strong>
-                                    <ul class="mb-0">
-                                        @foreach($items as $h)
-                                            <li>
-                                                {{ $h['descripcion'] ?? 'Sin descripción' }}
-                                                @if(!empty($h['codigo']))
-                                                    <small class="text-muted">({{ $h['codigo'] }})</small>
-                                                @endif
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- LISTAS RESTRICTIVAS --}}
-                <div class="card mb-3">
-                    <div class="card-header bg-danger text-white">Listas Restrictivas</div>
-                    <div class="card-body">
-                        @foreach($json['listas_restrictivas'] ?? [] as $k => $v)
-                            {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- ANTECEDENTES --}}
-                <div class="card mb-3">
-                    <div class="card-header bg-secondary text-white">Antecedentes Legales</div>
-                    <div class="card-body">
-                        @foreach($json['antecedentes_legales'] ?? [] as $k => $v)
-                            {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- RUNT --}}
-                <div class="card mb-3">
-                    <div class="card-header bg-info text-white">Tránsito y RUNT</div>
-                    <div class="card-body">
-                        @foreach($json['transito_y_runt'] ?? [] as $k => $v)
-                            {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- PROFESIONALES --}}
-                <div class="card mb-3">
-                    <div class="card-header bg-success text-white">Profesionales y Económicos</div>
-                    <div class="card-body">
-                        @foreach($json['profesionales_y_economicos'] ?? [] as $k => $v)
-                            {!! renderSource(strtoupper(str_replace('_',' ', $k)), $v) !!}
-                        @endforeach
-                    </div>
-                </div>
-            @endif
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         </div>
     </body>
 </html>

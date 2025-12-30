@@ -51,6 +51,7 @@ class ProcesarReporteService
             'hallazgos' => $this->procesarHallazgosConDetalle($data),
             'listas_restrictivas' => $this->bloqueListasRestrictivas($data), 
             'antecedentes_legales' => $this->bloqueAntecedentes($data), 
+            'antecedentes_legales_completos' => $this->bloqueAntecedentesCompletos($data), 
             'transito_y_runt' => $this->bloqueRuntTransito($data), 
             'profesionales_y_economicos' => $this->bloqueProfesionalFinanciero($data),
         ];
@@ -59,10 +60,10 @@ class ProcesarReporteService
     /* =====================================================
      |  DETECCIÓN DE TIPO DE SUJETO
      ===================================================== */
-    private function esEmpresa(array $data): bool
-    {
-        return !empty($data['razon_social']) || !empty($data['registro_mercantil']);
-    }
+    // private function esEmpresa(array $data): bool
+    // {
+    //     return !empty($data['razon_social']) || !empty($data['registro_mercantil']);
+    // }
 
     /* =====================================================
      |  MAPEO PERSONA
@@ -142,6 +143,15 @@ class ProcesarReporteService
     {
         $dict = $data['dict_hallazgos'] ?? [];
 
+        if (!is_array($dict)) {
+            return [
+                'altos' => [],
+                'medios' => [],
+                'bajos' => [],
+                'infos' => [],
+            ];
+        }
+
         $resultado = [
             'altos' => [],
             'medios' => [],
@@ -150,15 +160,28 @@ class ProcesarReporteService
         ];
 
         foreach ($resultado as $nivel => $_) {
-            foreach ($dict[$nivel] ?? [] as $item) {
+
+            if (!isset($dict[$nivel]) || !is_array($dict[$nivel])) {
+                continue;
+            }
+
+            foreach ($dict[$nivel] as $item) {
+
+                if (!is_array($item)) {
+                    continue;
+                }
+
                 $codigo = $item['codigo'] ?? null;
+
                 $resultado[$nivel][] = [
                     'codigo' => $codigo,
                     'descripcion' => $item['descripcion'] ?? '',
                     'fuente' => $item['fuente'] ?? '',
                     'hallazgo' => $item['hallazgo'] ?? '',
                     'nivel' => $nivel,
-                    'detalle' => $codigo && isset($data[$codigo]) ? $data[$codigo] : null,
+                    'detalle' => ($codigo && array_key_exists($codigo, $data))
+                        ? $data[$codigo]
+                        : null,
                 ];
             }
         }
@@ -172,18 +195,38 @@ class ProcesarReporteService
     private function bloqueListasRestrictivas(array $data): array
     {
         return $this->mapSources($data, [
-            'lista_onu', 'ofac', 'europol', 'iadb', 'peps', 'peps2'
+            'lista_onu', 
+            'ofac', 
+            'europol', 
+            'iadb', 
+            'peps', 
+            'peps2'
         ]);
     }
 
     private function bloqueAntecedentes(array $data): array
     {
         return $this->mapSources($data, [
-            'contraloria', 'contaduria', 'antecedentes_disciplinarios',
-            'policia', 'delitos_sexuales', 'rut', 'rnmc', 'sirna'
+            'contraloria', 
+            'contaduria', 
+            'procuraduria',
+            'antecedentes_disciplinarios',
+            'policia', 
+            'delitos_sexuales', 
+            'rut', 
+            'rnmc', 
+            'sirna'
         ]);
     }
 
+    private function bloqueAntecedentesCompletos(array $data): array
+    {
+        return $this->mapSources($data, [
+            'rama_unificada'
+
+        ]);
+    }
+    
     private function bloqueRuntTransito(array $data): array
     {
         return $this->mapSources($data, [
@@ -202,11 +245,32 @@ class ProcesarReporteService
     private function mapSources(array $data, array $fuentes): array
     {
         $out = [];
+
         foreach ($fuentes as $f) {
-            if (array_key_exists($f, $data) && !empty($data[$f])) {
+
+            if (!array_key_exists($f, $data)) {
+                continue;
+            }
+
+            // Ignorar errores técnicos
+            if ($data[$f] === 'Error') {
+                continue;
+            }
+
+            // Normalizamos todo a array
+            if (is_array($data[$f])) {
                 $out[$f] = $data[$f];
+            } elseif (is_bool($data[$f])) {
+                $out[$f] = $data[$f];
+            } elseif (is_null($data[$f]) || $data[$f] === '') {
+                $out[$f] = [];
+            } else {
+                // Convertir cualquier string, número u otro a array con un solo elemento
+                $out[$f] = [$data[$f]];
             }
         }
+
         return $out;
     }
+
 }

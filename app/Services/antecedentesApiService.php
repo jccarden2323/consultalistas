@@ -6,11 +6,12 @@ use Illuminate\Support\Facades\Http;
 
 class AntecedentesApiService
 {
-    public function enviarPersona($doc, $tipoId)
+    public function enviarPersona($doc, $tipoId, $fechaExpedicion = null)
     {
         try{
             
-            $url = 'https://docs.tusdatos.co/api/launch';
+            // $url = 'https://docs.tusdatos.co/api/launch';
+            $url = 'https://dash-board.tusdatos.co/api/launch';
 
             // Estructura del cuerpo (la API requiere un array con objetos)
             $payload = [
@@ -24,7 +25,7 @@ class AntecedentesApiService
    
             $response = Http::withoutVerifying()
              ->withHeaders([
-                'Authorization' => 'Basic cHJ1ZWJhczpwYXNzd29yZA==',
+                'Authorization' => 'Basic bHVpc2FsYmVydG9fdmxAY29vdHJhbnNub3JjYWxkYXMuY29tOktyb25vczUwMDc1IQ==',
                 'Content-Type' => 'application/json',
             ])
             ->post($url, $payload);
@@ -47,7 +48,8 @@ class AntecedentesApiService
                 return [
                     'error' => true,
                     'status' => $response->status(),
-                    'message' => $response->body()
+                    'message' => $response->body(),
+                    'headers' => $response->headers()
                 ];
             }
 
