@@ -7,7 +7,8 @@ use App\Models\Persona;
 
 class ConsultarApiJobStatus
 {
-    private $baseUrl = "https://docs.tusdatos.co/api";
+    //private $baseUrl = "https://docs.tusdatos.co/api";
+    private $baseUrl = "https://dash-board.tusdatos.co/api";
 
     public function consultarJobId($jobid)
     {        
@@ -16,7 +17,7 @@ class ConsultarApiJobStatus
 
             $response = Http::withoutVerifying()
                 ->withHeaders([
-                    'Authorization' => 'Basic cHJ1ZWJhczpwYXNzd29yZA==',
+                    'Authorization' => 'Basic bHVpc2FsYmVydG9fdmxAY29vdHJhbnNub3JjYWxkYXMuY29tOktyb25vczUwMDc1IQ==',
                     'Content-Type' => 'application/json',
                 ])
                 ->get($url);
@@ -45,7 +46,7 @@ class ConsultarApiJobStatus
     
             $response = Http::withoutVerifying()
                 ->withHeaders([
-                    'Authorization' => 'Basic cHJ1ZWJhczpwYXNzd29yZA==',
+                    'Authorization' => 'Basic bHVpc2FsYmVydG9fdmxAY29vdHJhbnNub3JjYWxkYXMuY29tOktyb25vczUwMDc1IQ==',
                     'Content-Type' => 'application/json',
                 ])
                 ->get($url);
