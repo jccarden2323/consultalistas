@@ -12,8 +12,13 @@
     <a href="{{ route('personas.crear') }}" class="btn btn-secondary mb-3">← Volver</a>
     <h2 class="mb-4">Reportes Generados</h2>
 
-    @if(session('error'))
+    {{-- @if(session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif --}}
+    @if(session('info'))
+        <div class="alert alert-info">
+            {{ session('info') }}
+        </div>
     @endif
 
     <div class="table-responsive">
@@ -37,7 +42,17 @@
                         <td>
                             <a href="{{ route('personas.reporte', $p->ppersonadoc) }}" class="btn btn-sm btn-primary">
                                 Ver Reporte
-                            </a>
+                            </a>                       
+
+                            <form action="{{ route('personas.retry', $p->ppersonadoc) }}" method="POST"
+                                onsubmit="return confirm('¿Desea reintentar la consulta para cargar las fuentes con error?');">
+                                @csrf
+                                <button type="submit"
+                                        class="btn btn-sm btn-warning"
+                                        {{ !$p->idreporte ? 'disabled' : '' }}>
+                                    Reintentar
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 @empty

@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\personas;
 use App\Models\reportapi;
 use App\Services\AntecedentesApiService;
-use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
+use App\Services\RecargarApiService;
 
 class PersonasController extends Controller
 {   
@@ -129,6 +128,28 @@ class PersonasController extends Controller
                 'message' => 'Error al procesar',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function retry(Personas $persona, RecargarApiService $recargarApiService)
+    {
+        try {
+
+            if (!$persona->idreporte) {
+                return back()->with('error', 'No existe un reporte previo para reintentar la consulta.');
+            }
+
+            $resultado = $recargarApiService->recargar($persona);
+
+            if (isset($resultado['info'])) {
+                return back()->with('info', $resultado['mensaje']);
+            }
+
+            return back()->with('success', 'La consulta fue reintentada correctamente.');
+
+        } catch (\Exception $e) {
+
+            return back()->with('error', $e->getMessage());
         }
     }
 }

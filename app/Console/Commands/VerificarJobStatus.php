@@ -33,7 +33,10 @@ public function handle()
 {
     $this->info("Proceso iniciado");
 
-    $personas = Personas::whereNotNull('jobid')
+    $personas = Personas::where(function ($q) {
+            $q->whereNotNull('jobid_actual')
+            ->orWhereNotNull('jobid');
+        })
         ->where('estado', 'PENDIENTE')
         ->get();
 
@@ -46,11 +49,12 @@ public function handle()
     foreach ($personas as $persona) {
 
         try {
+            $jobActivo = $persona->jobid_actual ?? $persona->jobid;
 
-            $this->info("Procesando persona con jobid {$persona->jobid}");
+            $this->info("Procesando persona con jobid {$jobActivo}");
 
             // 1️⃣ Consultar estado del JOB
-            $response = $this->consultarApiJobStatus->consultarJobId($persona->jobid);
+            $response = $this->consultarApiJobStatus->consultarJobId($jobActivo);
             
             $estado  = strtolower($response['estado'] ?? $response['task_estado'] ?? '');
             $idReporte = $response['id'] ?? null;
@@ -67,7 +71,7 @@ public function handle()
 
             if (!$idReporte) {
                 Log::warning("Job finalizado pero sin ID de reporte", [
-                    'jobid' => $persona->jobid,
+                    'jobid' => $jobActivo,
                     'response' => $response,
                 ]);
                 continue;
@@ -77,12 +81,12 @@ public function handle()
             $persona->save();
  
             if ($estado !== 'finalizado') {
-                $this->info("Job {$persona->jobid} aún no finaliza ({$estado})");
+                $this->info("Job {$jobActivo} aún no finaliza ({$estado})");
                 continue;
             }
 
             Log::info("Consultando obtenerReporte()", [
-                'jobid' => $persona->jobid,
+                'jobid' => $jobActivo,
                 'idReporte' => $idReporte
             ]);
 
@@ -114,7 +118,7 @@ public function handle()
 
             if (($reporte['error'] ?? false) === true) {
                 Log::info("Reporte con errores parciales", [
-                    'jobid' => $persona->jobid,
+                    'jobid' => $jobActivo,
                     'errores' => $reporte['errores'] ?? [],
                 ]);
             }
@@ -125,12 +129,12 @@ public function handle()
             $persona->save();
 
             Log::info("Reporte final guardado correctamente", [
-                'jobid' => $persona->jobid,
+                'jobid' => $jobActivo,
                 'id_reporte' => $idReporte
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Error procesando jobid {$persona->jobid}", [
+            Log::error("Error procesando jobid {$jobActivo}", [
                 'error' => $e->getMessage()
             ]);
         }
