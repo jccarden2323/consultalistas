@@ -15,6 +15,9 @@ Route::post('/personas/store', [PersonasController::class, 'store'])->name('pers
 Route::get('/personas', [PersonasController::class, 'index'])->name('personas.index');
 Route::get('/personas/{id}/reporte', [PersonasController::class, 'reporte'])->name('personas.reporte');
 
+Route::post('/personas/{persona}/retry', [PersonasController::class, 'retry'])->name('personas.retry');
+
+
 
 
 
