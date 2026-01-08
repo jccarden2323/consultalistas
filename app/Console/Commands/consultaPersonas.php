@@ -60,7 +60,6 @@ class consultaPersonas extends Command
                     $persona->jobid = $response['jobid'] ?? null;
                     $persona->validado = $response['validado'] ?? null;    
                     $persona->estado = 'PENDIENTE';
-                    $persona->fechasolicitud = now();
                     $persona->save();
 
                     $this->info("Persona {$persona->ppersonadoc} actualizada con jobid {$persona->jobid}");

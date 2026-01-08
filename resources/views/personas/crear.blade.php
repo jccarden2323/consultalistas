@@ -143,7 +143,7 @@
                                 @enderror
                             </div>
                             <button type="submit" class="btn btn-primary btn-lg">
-                                Cosultar Persona
+                                Cosultar
                             </button>
 
                         </div>
