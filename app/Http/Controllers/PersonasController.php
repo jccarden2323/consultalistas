@@ -20,8 +20,7 @@ class PersonasController extends Controller
     public function index()
     {
         $personas = Personas::orderBy('fechasolicitud', 'desc')
-            ->limit(50)
-            ->get();
+            ->paginate(50);
 
         return view('personas.index', compact('personas'));
     }
@@ -48,24 +47,28 @@ class PersonasController extends Controller
         
     public function store(Request $request)
     {
-        $request->validate([
-            'ppersonadoc' => 'required|numeric|unique:personas,ppersonadoc',
+        $request->validate(
+            [
+            'ppersonadoc' => 'required|numeric',
             'ppersonatipodoc' => 'required|string',
             'fechaexpedicion' => 'nullable|date'        
-        ]);
+            ]
+        );
 
-        // Creación registro
-        $persona = Personas::create([
-            'ppersonadoc' => $request->ppersonadoc,
-            'ppersonatipodoc' => $request->ppersonatipodoc,
-            'fechaexpedicion' => $request->fechaexpedicion,
-            'estado' => 'NO'
-        ]);
+        $persona = Personas::updateOrCreate(            
+            ['ppersonadoc' => $request->ppersonadoc],
+            [
+                'ppersonatipodoc' => $request->ppersonatipodoc,
+                'fechaexpedicion' => $request->fechaexpedicion,
+                'fechasolicitud'  => now(),
+                'estado' => 'NO'
+            ]
+        );
 
         return redirect()
             ->route('personas.crear')
             ->with('success', 'Registro Exitoso');
-    }    
+    }
 
     public function obtenerPersonas()
     {

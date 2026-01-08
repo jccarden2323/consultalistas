@@ -55,6 +55,7 @@ class RecargarApiService
         // Actualizamos el JOB ACTIVO
         $persona->update([
             'jobidretry' => $data['jobid'],
+            'estado'     => 'PENDIENTE',
             'fecharetry' => now(),
         ]);
 

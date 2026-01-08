@@ -34,7 +34,7 @@ public function handle()
     $this->info("Proceso iniciado");
 
     $personas = Personas::where(function ($q) {
-            $q->whereNotNull('jobid_actual')
+            $q->whereNotNull('jobidretry')
             ->orWhereNotNull('jobid');
         })
         ->where('estado', 'PENDIENTE')
@@ -49,7 +49,7 @@ public function handle()
     foreach ($personas as $persona) {
 
         try {
-            $jobActivo = $persona->jobid_actual ?? $persona->jobid;
+            $jobActivo = $persona->jobidretry ?? $persona->jobid;
 
             $this->info("Procesando persona con jobid {$jobActivo}");
 
