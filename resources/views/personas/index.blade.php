@@ -12,6 +12,28 @@
     <a href="{{ route('personas.crear') }}" class="btn btn-secondary mb-3">← Volver</a>
     <h2 class="mb-4">Reportes Generados</h2>
 
+    <form method="GET" action="{{ route('personas.index') }}" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <input type="text"
+               name="documento"
+               class="form-control"
+               placeholder="Buscar por documento"
+               value="{{ request('documento') }}">
+    </div>
+
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+            Buscar
+        </button>
+
+        @if(request()->filled('documento'))
+            <a href="{{ route('personas.index') }}" class="btn btn-outline-secondary">
+                Limpiar
+            </a>
+        @endif
+    </div>
+</form>
+
     {{-- @if(session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif --}}
@@ -57,7 +79,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="text-center">Sin registros</td>
+                        <td colspan="5" class="text-center">
+                            No se encontraron resultados para la búsqueda
+                            @if(request('documento'))
+                                con el documento "{{ request('documento') }}"
+                            @endif
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
