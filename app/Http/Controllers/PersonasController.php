@@ -17,10 +17,23 @@ class PersonasController extends Controller
         $this->apiService = $apiService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $personas = Personas::orderBy('fechasolicitud', 'desc')
-            ->paginate(50);
+        $query = Personas::query();
+
+        //Busca por documento
+        if ($request->filled('documento')) {
+            $documento = trim($request->documento);
+
+            $query->whereRaw(
+                "CAST(ppersonadoc AS CHAR) LIKE ?",
+                ['%' . $documento . '%']
+            );
+        }
+        $personas = $query
+            ->orderBy('fechasolicitud', 'desc')
+            ->paginate(50)
+            ->withQueryString();
 
         return view('personas.index', compact('personas'));
     }
