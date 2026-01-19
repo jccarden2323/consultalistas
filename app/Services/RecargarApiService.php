@@ -4,6 +4,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\personas;
+use Carbon\Carbon;
 
 class RecargarApiService
 {
@@ -56,7 +57,7 @@ class RecargarApiService
         $persona->update([
             'jobidretry' => $data['jobid'],
             'estado'     => 'PENDIENTE',
-            'fecharetry' => now(),
+            'fecharetry' => Carbon::now(),
         ]);
 
         return $data;

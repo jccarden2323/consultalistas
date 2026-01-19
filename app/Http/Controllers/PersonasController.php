@@ -7,6 +7,7 @@ use App\Models\personas;
 use App\Models\reportapi;
 use App\Services\AntecedentesApiService;
 use App\Services\RecargarApiService;
+use Carbon\Carbon;
 
 class PersonasController extends Controller
 {   
@@ -73,7 +74,7 @@ class PersonasController extends Controller
             [
                 'ppersonatipodoc' => $request->ppersonatipodoc,
                 'fechaexpedicion' => $request->fechaexpedicion,
-                'fechasolicitud'  => now(),
+                'fechasolicitud'  => Carbon::now(),
                 'estado' => 'NO'
             ]
         );
@@ -122,7 +123,7 @@ class PersonasController extends Controller
                     $persona->jobid = $response['jobid'] ?? null;
                     $persona->validado = $response['validado'] ?? null;    
                     $persona->estado = 'PENDIENTE';
-                    $persona->fechasolicitud = now();
+                    $persona->fechasolicitud = Carbon::now();
                     $persona->save();
     
                     $resultados[] = [
