@@ -53,13 +53,13 @@ public function handle()
 
             $this->info("Procesando persona con jobid {$jobActivo}");
 
-            // 1️⃣ Consultar estado del JOB
+            // Consultar estado del JOB
             $response = $this->consultarApiJobStatus->consultarJobId($jobActivo);
             
             $estado  = strtolower($response['estado'] ?? $response['task_estado'] ?? '');
             $idReporte = $response['id'] ?? null;
 
-            // 2️⃣ Guardar SIEMPRE el JSON del job
+            // Guardar SIEMPRE el JSON del job
             reportapi::updateOrCreate(
                 ['idreportdoc' => $persona->ppersonadoc],
                 [
@@ -91,11 +91,9 @@ public function handle()
             ]);
 
 
-            // 4️⃣ Consultar reporte FINAL usando el ID
+            // Consultar reporte FINAL usando el ID
             $reporte = $this->consultarApiJobStatus->obtenerReporte($idReporte);
             $jsonCrudo = json_encode($reporte, JSON_UNESCAPED_UNICODE);
-
-            //Log::info("Reporte recibido", ['id' => $reportId]);
 
             reportapi::updateOrCreate(
                 ['idreportdoc' => $persona->ppersonadoc],
@@ -106,7 +104,7 @@ public function handle()
                 ]
             );               
 
-            // 6️⃣ Procesar reporte
+            // Procesar reporte
             $reporteProcesado = $this->procesarReporteService->procesarReporte($jsonCrudo);
 
             reportapi::updateOrCreate(
@@ -123,8 +121,14 @@ public function handle()
                 ]);
             }
 
+            $nombrePersona = $reporteProcesado['datos_persona']['nombre'] ?? null;
+            
+            if (!empty($nombrePersona) && empty($persona->personanombre)) {
+                $persona->personanombre = $nombrePersona;
+                $persona->validado = 1;
+            }
 
-            // 7️⃣ Marcar persona como procesada
+            // Marcar persona como procesada 
             $persona->estado = 'PROCESADO';
             $persona->save();
 

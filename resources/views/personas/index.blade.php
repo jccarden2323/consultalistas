@@ -58,7 +58,13 @@
                 @forelse($personas as $p)
                     <tr>
                         <td>{{ $p->ppersonadoc }}</td>
-                        <td>{{ $p->personanombre }}</td>
+                        <td>
+                            @if($p->validado == 0)
+                                <span class="text-muted">Validando Nombre</span>
+                            @else
+                                {{ $p->personanombre }}
+                            @endif
+                        </td>
                         <td>{{ $p->estado }}</td>
                         <td>{{ $p->fechasolicitud }}</td>
                         <td>

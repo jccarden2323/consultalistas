@@ -74,7 +74,7 @@ class ProcesarReporteService
             'tipo_sujeto' => 'persona',
             'datos_persona' => [
                 'nombre' => $data['nombre'] ?? null,
-                'documento' => $data['rut'] ?? $data['id'] ?? null,
+                'documento' => $data['id'] ?? $data['rut'] ?? null,
                 'genero' => $data['genero'] ?? null,
             ],
             'datos_empresa' => [],
