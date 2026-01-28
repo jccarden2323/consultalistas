@@ -8,6 +8,7 @@ use App\Models\reportapi;
 use App\Services\AntecedentesApiService;
 use App\Services\RecargarApiService;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PersonasController extends Controller
 {   
@@ -22,7 +23,6 @@ class PersonasController extends Controller
     {
         $query = Personas::query();
 
-        //Busca por documento
         if ($request->filled('documento')) {
             $documento = trim($request->documento);
 
@@ -49,8 +49,7 @@ class PersonasController extends Controller
         }
         
         $json = json_decode($reporte->reportjsonprocesado, true);
-        //dd($json ?? 'No hay datos');
-
+       
         return view('personas.reporte', compact('reporte', 'json'));
     }
 
@@ -169,4 +168,23 @@ class PersonasController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
+    
+    public function reportePdf($doc)
+    {
+        $reporte = Reportapi::where('idreportdoc', $doc)->first();
+
+        if (!$reporte) {
+            abort(404, 'No existe reporte para este documento');
+        }
+
+        $json = json_decode($reporte->reportjsonprocesado, true);
+
+        if (!isset($json['datos_persona'])) {
+            abort(404, 'El reporte no tiene datos de persona');
+        }
+
+        return Pdf::loadView('personas.reporte_pdf', compact('json'))
+            ->stream('reporte.pdf');
+    }
+    
 }
