@@ -14,7 +14,11 @@ use Illuminate\Support\Str;
 class VerificarJobStatus extends Command
 {
     
-    protected $signature = 'app:verificar-job-status';
+    protected $signature = 'app:verificar-job-status 
+                        {--reprocesar : Reprocesa reportjson existentes}
+                        {--desde= : Fecha inicio YYYY-MM-DD}
+                        {--hasta= : Fecha fin YYYY-MM-DD}';
+
     protected $description = 'Verifica el estado de los jobid y obtiene el reporte';
 
     protected $consultarApiJobStatus;
@@ -29,122 +33,182 @@ class VerificarJobStatus extends Command
         $this->procesarReporteService = $procesarReporteService;
     }
 
-public function handle()
-{
-    $this->info("Proceso iniciado");
+    public function handle()
+    {
+        if ($this->option('reprocesar')) {
+            $this->reprocesarReportes();
+            return Command::SUCCESS;
+        }
 
-    $personas = Personas::where(function ($q) {
-            $q->whereNotNull('jobidretry')
-            ->orWhereNotNull('jobid');
-        })
-        ->where('estado', 'PENDIENTE')
-        ->get();
+        $this->info("Proceso iniciado");
 
-    if ($personas->isEmpty()) {
-        $this->info("No se encontraron registros pendientes para procesar.");
-        Log::info("No hay registros pendientes");
+        $personas = Personas::where(function ($q) {
+                $q->whereNotNull('jobidretry')
+                ->orWhereNotNull('jobid');
+            })
+            ->where('estado', 'PENDIENTE')
+            ->get();
+
+        if ($personas->isEmpty()) {
+            $this->info("No se encontraron registros pendientes para procesar.");
+            Log::info("No hay registros pendientes");
+            return Command::SUCCESS;
+        }
+
+        foreach ($personas as $persona) {
+
+            try {
+                $jobActivo = $persona->jobidretry ?? $persona->jobid;
+
+                $this->info("Procesando persona con jobid {$jobActivo}");
+
+                // Consultar estado del JOB
+                $response = $this->consultarApiJobStatus->consultarJobId($jobActivo);
+                
+                $estado  = strtolower($response['estado'] ?? $response['task_estado'] ?? '');
+                $idReporte = $response['id'] ?? null;
+
+                // Guardar SIEMPRE el JSON del job
+                reportapi::updateOrCreate(
+                    ['idreportdoc' => $persona->ppersonadoc],
+                    [
+                        'estadojob'  => $estado,
+                        'reportjson' => json_encode($response, JSON_UNESCAPED_UNICODE),
+                        'fechareport'=> Carbon::now(),
+                    ]
+                );
+
+                if (!$idReporte) {
+                    Log::warning("Job finalizado pero sin ID de reporte", [
+                        'jobid' => $jobActivo,
+                        'response' => $response,
+                    ]);
+                    continue;
+                }
+
+                $persona->idreporte = $idReporte;
+                $persona->save();
+    
+                if ($estado !== 'finalizado') {
+                    $this->info("Job {$jobActivo} aún no finaliza ({$estado})");
+                    continue;
+                }
+
+                Log::info("Consultando obtenerReporte()", [
+                    'jobid' => $jobActivo,
+                    'idReporte' => $idReporte
+                ]);
+
+
+                // Consultar reporte FINAL usando el ID
+                $reporte = $this->consultarApiJobStatus->obtenerReporte($idReporte);
+                $jsonCrudo = json_encode($reporte, JSON_UNESCAPED_UNICODE);
+
+                reportapi::updateOrCreate(
+                    ['idreportdoc' => $persona->ppersonadoc],
+                    [
+                        'estadojob' => 'finalizado',
+                        'reportjson' => $jsonCrudo,
+                        'fechareport' => Carbon::now(),
+                    ]
+                );               
+
+                // Procesar reporte
+                $reporteProcesado = $this->procesarReporteService->procesarReporte($jsonCrudo);
+
+                reportapi::updateOrCreate(
+                    ['idreportdoc' => $persona->ppersonadoc],
+                    [
+                        'reportjsonprocesado' => json_encode($reporteProcesado, JSON_UNESCAPED_UNICODE),                    
+                    ]
+                );
+
+                if (($reporte['error'] ?? false) === true) {
+                    Log::info("Reporte con errores parciales", [
+                        'jobid' => $jobActivo,
+                        'errores' => $reporte['errores'] ?? [],
+                    ]);
+                }
+
+                $nombrePersona = $reporteProcesado['datos_persona']['nombre'] ?? null;
+                
+                if (!empty($nombrePersona) && empty($persona->personanombre)) {
+                    $persona->personanombre = $nombrePersona;
+                    $persona->validado = 1;
+                }
+
+                // Marcar persona como procesada 
+                $persona->estado = 'PROCESADO';
+                $persona->save();
+
+                Log::info("Reporte final guardado correctamente", [
+                    'jobid' => $jobActivo,
+                    'id_reporte' => $idReporte
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error("Error procesando jobid {$jobActivo}", [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }   
+
         return Command::SUCCESS;
     }
 
-    foreach ($personas as $persona) {
+    private function reprocesarReportes()
+    {
+        $this->info("Iniciando reprocesamiento de reportes históricos...");
 
-        try {
-            $jobActivo = $persona->jobidretry ?? $persona->jobid;
+        $desde = $this->option('desde');
+        $hasta = $this->option('hasta');
 
-            $this->info("Procesando persona con jobid {$jobActivo}");
+        $query = reportapi::whereNotNull('reportjson')
+            ->where(function ($q) {
+                $q->whereNull('reportjsonprocesado')
+                ->orWhere('reportjsonprocesado', 'not like', '%"dest"%');
+            });
 
-            // Consultar estado del JOB
-            $response = $this->consultarApiJobStatus->consultarJobId($jobActivo);
-            
-            $estado  = strtolower($response['estado'] ?? $response['task_estado'] ?? '');
-            $idReporte = $response['id'] ?? null;
-
-            // Guardar SIEMPRE el JSON del job
-            reportapi::updateOrCreate(
-                ['idreportdoc' => $persona->ppersonadoc],
-                [
-                    'estadojob'  => $estado,
-                    'reportjson' => json_encode($response, JSON_UNESCAPED_UNICODE),
-                    'fechareport'=> Carbon::now(),
-                ]
-            );
-
-            if (!$idReporte) {
-                Log::warning("Job finalizado pero sin ID de reporte", [
-                    'jobid' => $jobActivo,
-                    'response' => $response,
-                ]);
-                continue;
-            }
-
-            $persona->idreporte = $idReporte;
-            $persona->save();
- 
-            if ($estado !== 'finalizado') {
-                $this->info("Job {$jobActivo} aún no finaliza ({$estado})");
-                continue;
-            }
-
-            Log::info("Consultando obtenerReporte()", [
-                'jobid' => $jobActivo,
-                'idReporte' => $idReporte
-            ]);
-
-
-            // Consultar reporte FINAL usando el ID
-            $reporte = $this->consultarApiJobStatus->obtenerReporte($idReporte);
-            $jsonCrudo = json_encode($reporte, JSON_UNESCAPED_UNICODE);
-
-            reportapi::updateOrCreate(
-                ['idreportdoc' => $persona->ppersonadoc],
-                [
-                    'estadojob' => 'finalizado',
-                    'reportjson' => $jsonCrudo,
-                    'fechareport' => Carbon::now(),
-                ]
-            );               
-
-            // Procesar reporte
-            $reporteProcesado = $this->procesarReporteService->procesarReporte($jsonCrudo);
-
-            reportapi::updateOrCreate(
-                ['idreportdoc' => $persona->ppersonadoc],
-                [
-                    'reportjsonprocesado' => json_encode($reporteProcesado, JSON_UNESCAPED_UNICODE),                    
-                ]
-            );
-
-            if (($reporte['error'] ?? false) === true) {
-                Log::info("Reporte con errores parciales", [
-                    'jobid' => $jobActivo,
-                    'errores' => $reporte['errores'] ?? [],
-                ]);
-            }
-
-            $nombrePersona = $reporteProcesado['datos_persona']['nombre'] ?? null;
-            
-            if (!empty($nombrePersona) && empty($persona->personanombre)) {
-                $persona->personanombre = $nombrePersona;
-                $persona->validado = 1;
-            }
-
-            // Marcar persona como procesada 
-            $persona->estado = 'PROCESADO';
-            $persona->save();
-
-            Log::info("Reporte final guardado correctamente", [
-                'jobid' => $jobActivo,
-                'id_reporte' => $idReporte
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error("Error procesando jobid {$jobActivo}", [
-                'error' => $e->getMessage()
-            ]);
+        if ($desde) {
+            $query->whereDate('fechareport', '>=', $desde);
         }
+
+        if ($hasta) {
+            $query->whereDate('fechareport', '<=', $hasta);
+        }
+
+        $total = $query->count();
+        $this->info("Total registros a reprocesar: {$total}");
+
+        $query->chunk(200, function ($reportes) {
+
+            foreach ($reportes as $reporte) {
+
+                try {
+
+                    $procesado = $this->procesarReporteService
+                        ->procesarReporte($reporte->reportjson);
+
+                    $reporte->reportjsonprocesado = json_encode(
+                        $procesado,
+                        JSON_UNESCAPED_UNICODE
+                    );
+
+                    $reporte->save();
+
+                    $this->info("Reprocesado ID: {$reporte->idreportdoc}");
+
+                } catch (\Exception $e) {
+
+                    Log::error("Error reprocesando reporte {$reporte->idreportdoc}", [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        });
+
+        $this->info("Reprocesamiento finalizado correctamente.");
     }
 
-    return Command::SUCCESS;
-}
 
 }
