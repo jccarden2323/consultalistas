@@ -318,6 +318,52 @@
                         </div>
                     </div>
 
+                    {{-- EVIDENCIAS --}}
+                    @php
+                    $evidencias = $json['evidencias'] ?? [];
+                    @endphp
+
+                    @if(count($evidencias))
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingEvidencias">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvidencias" aria-expanded="false" aria-controls="collapseEvidencias">
+                                Evidencias Visuales de Consultas
+                            </button>
+                        </h2>
+
+                        <div id="collapseEvidencias" class="accordion-collapse collapse" aria-labelledby="headingEvidencias" data-bs-parent="#reporteAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    @foreach($evidencias as $ev)
+                                        <div class="col-md-4 mb-4 text-center">
+                                            <div class="card h-100 shadow-sm">
+                                                <div class="card-header bg-light fw-semibold text-capitalize">
+                                                    {{ str_replace('_', ' ', $ev['nombre']) }}
+                                                </div>
+                                                <div class="card-body text-center">
+                                                    <img src="{{ $ev['url'] }}" class="img-fluid rounded border" alt="{{ $ev['nombre'] }}"
+                                                        style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modal{{ $loop->index }}">
+                                                </div>
+
+                                                <!-- Modal -->
+                                                <div class="modal fade" id="modal{{ $loop->index }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                    <div class="modal-content">
+                                                    <div class="modal-body text-center">
+                                                        <img src="{{ $ev['url'] }}" class="img-fluid" alt="{{ $ev['nombre'] }}">
+                                                    </div>
+                                                    </div>
+                                                </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
                 @endif
             </div>
 

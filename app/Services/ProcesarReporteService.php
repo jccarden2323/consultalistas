@@ -7,7 +7,9 @@ class ProcesarReporteService
     public function procesarReporte(string $jsonCrudo): array
     {
         $data = json_decode($jsonCrudo, true);
+        $dest = $data['dest'] ?? null;
 
+        print($dest);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [
                 'error' => true,
@@ -41,6 +43,7 @@ class ProcesarReporteService
         }
 
         return [
+            'dest' => $dest,
             'tipo_sujeto' => $tipo_sujeto,
             'datos_persona' => $datos_persona,
             'datos_empresa' => $datos_empresa,
@@ -54,20 +57,10 @@ class ProcesarReporteService
             'antecedentes_legales_completos' => $this->bloqueAntecedentesCompletos($data), 
             'transito_y_runt' => $this->bloqueRuntTransito($data), 
             'profesionales_y_economicos' => $this->bloqueProfesionalFinanciero($data),
+            'evidencias' => $this->construirEvidencias($data, $dest)
         ];
     }
 
-    /* =====================================================
-     |  DETECCIÓN DE TIPO DE SUJETO
-     ===================================================== */
-    // private function esEmpresa(array $data): bool
-    // {
-    //     return !empty($data['razon_social']) || !empty($data['registro_mercantil']);
-    // }
-
-    /* =====================================================
-     |  MAPEO PERSONA
-     ===================================================== */
     private function mapPersona(array $data): array
     {
         return [
@@ -107,7 +100,6 @@ class ProcesarReporteService
                 'concordato' => $data['concordato'] ?? null,
                 'contaduria' => $data['contaduria'] ?? null,
                 'contraloria' => $data['contraloria'] ?? null,
-                'dest' => $data['dest'] ?? null,
                 'empresa_prestadora' => $data['empresa_prestadora'] ?? null,
                 'fecha' => $data['fecha'] ?? null,
                 'google' => $data['google'] ?? [],
@@ -134,6 +126,36 @@ class ProcesarReporteService
                 'transitobog' => $data['transitobog'] ?? null,
             ],
         ];
+    }
+
+    private function construirEvidencias(array $data, ?string $dest): array
+    {
+        if (!$dest) {
+            return [];
+        }
+
+        $fuentesEvidencia = [
+            'policia'      => 'policia',
+            'procuraduria' => 'procuraduria',
+            'contraloria'  => 'contraloria',
+            'lista_onu'    => 'onu',
+            'ofac'         => 'ofac',
+        ];
+
+        $evidencias = [];
+
+        foreach ($fuentesEvidencia as $fuenteJson => $fuenteArchivo) {
+
+            if (array_key_exists($fuenteJson, $data) && $data[$fuenteJson] !== 'Error') {
+
+                $evidencias[] = [
+                    'nombre' => $fuenteArchivo,
+                    'url' => "https://static.tusdatos.co/{$dest}/{$fuenteArchivo}.jpg"
+                ];
+            }
+        }
+
+        return $evidencias;
     }
 
     /* =====================================================
