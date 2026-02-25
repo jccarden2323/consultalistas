@@ -33,7 +33,7 @@ class PersonasController extends Controller
         }
         $personas = $query
             ->orderBy('fechasolicitud', 'desc')
-            ->paginate(50)
+            ->paginate(10)
             ->withQueryString();
 
         return view('personas.index', compact('personas'));
